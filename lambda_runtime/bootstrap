@@ -29,9 +29,8 @@ while [ 1 ]; do
   fi
 
   echo "This is the shell script runtime"
-  echo ${BODY}
-  ./llama-cli -m model.gguf -p '${BODY}' -n 1000
+  RESPONSE="$(./llama-cli -m model.gguf -p "${BODY}" -n 1000)"
 
   URL="http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/${LAMBDA_REQUEST_ID}/response"
-  curl -X POST -d "SUCCESS" ${URL}
+  curl -X POST -d "\"${RESPONSE}\"" ${URL}
 done
