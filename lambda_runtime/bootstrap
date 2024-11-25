@@ -1,0 +1,37 @@
+#!/bin/sh
+
+MODULE=$(echo $_HANDLER | cut -d. -f1)
+METHOD=$(echo $_HANDLER | cut -d. -f2)
+
+set -euo pipefail
+
+echo ${MODULE}.${METHOD}
+
+while [ 1 ]; do
+  URL="http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/next"
+  RESPONSE=$(curl -si -w "\n%{size_header},%{size_download}" "${URL}")
+
+  HEADER_SIZE=$(sed -n '$ s/^\([0-9]*\),.*$/\1/ p' <<< "${RESPONSE}")
+  BODY_SIZE=$(sed -n '$ s/^.*,\([0-9]*\)$/\1/ p' <<< "${RESPONSE}")
+  HEADERS="${RESPONSE:0:${HEADER_SIZE}}"
+  BODY="${RESPONSE:${HEADER_SIZE}:${BODY_SIZE}}"
+
+  STATUS_CODE=$(echo ${HEADERS} | tr '\r' '\n' | grep "HTTP/1.1" | cut -d' ' -f 2)
+  LAMBDA_REQUEST_ID=$(echo ${HEADERS} | tr '\r' '\n' | grep "Lambda-Runtime-Aws-Request-Id" | cut -d' ' -f 3)
+  _X_AMZN_TRACE_ID=$(echo ${HEADERS} | tr '\r' '\n' | grep "Lambda-Runtime-Trace-Id" | cut -d' ' -f 3)
+
+  if [[ "${STATUS_CODE}" != "200" ]]; then
+    echo "/runtime/invocation/next returned status code ${STATUS_CODE}"
+    URL="http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/init/error"
+    ERROR="{\"errorMessage\":\"/runtime/invocation/next returned status code ${STATUS_CODE}\",\"errorType\":\"InvalidEventDataException\"}"
+    curl ${URL} -d "${ERROR}" -H "Lambda-Runtime-Function-Error-Type: Unhandled"
+    exit 1
+  fi
+
+  echo "This is the shell script runtime"
+  echo ${BODY}
+  ./llama-cli -m model.gguf -p '${BODY}' -n 1000
+
+  URL="http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/${LAMBDA_REQUEST_ID}/response"
+  curl -X POST -d "SUCCESS" ${URL}
+done
