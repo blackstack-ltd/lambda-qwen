@@ -29,6 +29,6 @@ resource "aws_lambda_function" "test_lambda" {
   role          = aws_iam_role.lambda_role.arn
   image_uri     = "${aws_ecr_repository.ecr_repo.repository_url}:${var.build_id}"
   package_type  = "Image"
-  timeout       = 120
-  memory_size   = 600
+  timeout       = 900
+  memory_size   = 10240
 }

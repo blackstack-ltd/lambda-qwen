@@ -41,8 +41,4 @@ Running an LLM model in a Lambda function isn’t ideal, primarily due to the la
 At the top of the `build.sh` deployment script, there is a variable called `MODEL`.
 You can change this to any other Hugging Face model name and test its compatibility.
 
-🛠️ Make sure you adapt the memory_size parameter in terraform/lambda.tf to suit the size of the model (make it twice the size of the model for good measure).
-
-⏳ When you first run a new, larger model, also set the timeout parameter to the maximum value (900 seconds) until you know how long the Lambda needs to load and execute the model.
-
 ⚠️  Note: More computationally expensive models may exceed Lambda’s maximum execution time of 15 minutes.
